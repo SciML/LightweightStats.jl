@@ -1,6 +1,6 @@
 name = "LightweightStats"
 uuid = "6e4b0b68-1f2b-4a7e-8f0e-d3e9f3d5c8a1"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["ChrisRackauckas <contact@chrisrackauckas.com>"]
 
 [deps]
