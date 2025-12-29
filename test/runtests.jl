@@ -8,6 +8,8 @@ using LightweightStats: mean, median, std, var, cov, cor, quantile, middle
 @testset "LightweightStats.jl" begin
     # Include regression tests against Statistics.jl
     include("regression_tests.jl")
+    # Include interface compatibility tests
+    include("interface_tests.jl")
     @testset "mean" begin
         @test mean([1, 2, 3, 4, 5]) ≈ 3.0
         @test mean([1.5, 2.5, 3.5]) ≈ 2.5
