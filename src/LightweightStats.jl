@@ -775,4 +775,38 @@ function middle(x::Real)
     return x
 end
 
+# Precompilation workload
+using PrecompileTools
+
+@compile_workload begin
+    # Precompile the most commonly used functions with Float64 vectors
+    x = [1.0, 2.0, 3.0, 4.0, 5.0]
+    y = [2.0, 4.0, 6.0, 8.0, 10.0]
+
+    # Basic statistics on vectors
+    mean(x)
+    std(x)
+    var(x)
+    median(x)
+    middle(x)
+    quantile(x, 0.5)
+    quantile(x, [0.25, 0.5, 0.75])
+
+    # Two-vector operations
+    cov(x, y)
+    cor(x, y)
+
+    # Matrix operations (common use case)
+    X = [1.0 2.0; 3.0 4.0; 5.0 6.0]
+    mean(X)
+    mean(X; dims = 1)
+    mean(X; dims = 2)
+    std(X)
+    var(X)
+    median(X)
+    cov(X)
+    cov(X; dims = 2)
+    cor(X)
+end
+
 end

@@ -1,9 +1,13 @@
 name = "LightweightStats"
 uuid = "6e4b0b68-1f2b-4a7e-8f0e-d3e9f3d5c8a1"
-authors = ["ChrisRackauckas <contact@chrisrackauckas.com>"]
 version = "0.1.0"
+authors = ["ChrisRackauckas <contact@chrisrackauckas.com>"]
+
+[deps]
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 
 [compat]
+PrecompileTools = "1"
 julia = "1.10"
 
 [extras]
