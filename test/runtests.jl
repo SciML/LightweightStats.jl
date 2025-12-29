@@ -5,6 +5,8 @@ using Random
 # Import functions from LightweightStats for cleaner test code
 using LightweightStats: mean, median, std, var, cov, cor, quantile, middle
 
+const GROUP = get(ENV, "GROUP", "all")
+
 @testset "LightweightStats.jl" begin
     # Include regression tests against Statistics.jl
     include("regression_tests.jl")
@@ -140,4 +142,9 @@ using LightweightStats: mean, median, std, var, cov, cor, quantile, middle
         @test var([1, 1, 1, 1]; corrected = false) == 0
         @test std([1, 1, 1, 1]; corrected = false) == 0
     end
+end
+
+# Allocation tests run separately to avoid precompilation interference
+if GROUP == "all" || GROUP == "nopre"
+    include("alloc_tests.jl")
 end

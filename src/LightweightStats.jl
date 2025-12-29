@@ -348,8 +348,12 @@ function cov(x::AbstractVector, y::AbstractVector; corrected::Bool = true)
     xmean = mean(x)
     ymean = mean(y)
 
-    # Use broadcasting instead of scalar indexing
-    s = sum((x .- xmean) .* _conj(y .- ymean))
+    # Use loop to avoid allocating intermediate arrays
+    T = promote_type(typeof(xmean), typeof(ymean))
+    s = zero(T)
+    @inbounds @simd for i in eachindex(x, y)
+        s += (x[i] - xmean) * _conj(y[i] - ymean)
+    end
     return corrected ? s / (n - 1) : s / n
 end
 
@@ -425,43 +429,71 @@ function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
         n, p = size(X)
         n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
 
-        means = vec(mean(X; dims = 1))
-        C = zeros(float(real(eltype(X))), p, p)
-        
-        # Center the data once using broadcasting
-        X_centered = X .- means'
+        T = float(real(eltype(X)))
 
-        for i in 1:p
-            for j in i:p
-                # Use views and broadcasting for column operations
-                s = sum(view(X_centered, :, i) .* _conj(view(X_centered, :, j)))
-                C[i, j] = corrected ? s / (n - 1) : s / n
-                if i != j
-                    C[j, i] = _conj(C[i, j])
+        # Compute means with a loop to avoid allocations
+        means = zeros(T, p)
+        @inbounds for j in 1:p
+            s = zero(eltype(X))
+            @simd for i in 1:n
+                s += X[i, j]
+            end
+            means[j] = real(s) / n
+        end
+
+        # Allocate output
+        C = zeros(T, p, p)
+        divisor = corrected ? n - 1 : n
+
+        # Compute covariance with nested loops (upper triangle only)
+        @inbounds for j in 1:p
+            for k in j:p
+                s = zero(T)
+                @simd for i in 1:n
+                    s += real((X[i, j] - means[j]) * _conj(X[i, k] - means[k]))
+                end
+                C[j, k] = s / divisor
+                if j != k
+                    C[k, j] = C[j, k]
                 end
             end
         end
+
         return C
     elseif dims == 2
-        n, p = size(X')
-        n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
+        n, p = size(X)
+        p == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), n, n)
 
-        means = vec(mean(X; dims = 2))
-        C = zeros(float(real(eltype(X))), p, p)
-        
-        # Center the data once using broadcasting
-        X_centered = X .- means
+        T = float(real(eltype(X)))
 
-        for i in 1:p
-            for j in i:p
-                # Use views and broadcasting for row operations
-                s = sum(view(X_centered, i, :) .* _conj(view(X_centered, j, :)))
-                C[i, j] = corrected ? s / (n - 1) : s / n
-                if i != j
-                    C[j, i] = _conj(C[i, j])
+        # Compute means for rows
+        means = zeros(T, n)
+        @inbounds for i in 1:n
+            s = zero(eltype(X))
+            @simd for j in 1:p
+                s += X[i, j]
+            end
+            means[i] = real(s) / p
+        end
+
+        # Allocate output
+        C = zeros(T, n, n)
+        divisor = corrected ? p - 1 : p
+
+        # Compute covariance with nested loops (upper triangle only)
+        @inbounds for j in 1:n
+            for k in j:n
+                s = zero(T)
+                @simd for i in 1:p
+                    s += real((X[j, i] - means[j]) * _conj(X[k, i] - means[k]))
+                end
+                C[j, k] = s / divisor
+                if j != k
+                    C[k, j] = C[j, k]
                 end
             end
         end
+
         return C
     else
         throw(ArgumentError("dims must be 1 or 2"))
@@ -510,14 +542,30 @@ r = \\frac{\\text{cov}(x, y)}{\\sigma_x \\sigma_y}
 Throws `DimensionMismatch` if vectors have different lengths.
 """
 function cor(x::AbstractVector, y::AbstractVector)
-    length(x) == length(y) || throw(DimensionMismatch("x and y must have the same length"))
+    n = length(x)
+    length(y) == n || throw(DimensionMismatch("x and y must have the same length"))
+    n == 0 && return oftype(real(zero(eltype(x)))/1, NaN)
 
-    sx = std(x; corrected = false)
-    sy = std(y; corrected = false)
+    # Compute means
+    xmean = mean(x)
+    ymean = mean(y)
 
-    (sx == 0 || sy == 0) && return oftype(real(zero(eltype(x)))/1, NaN)
+    # Compute covariance and variances in one pass to avoid redundant iterations
+    cov_xy = zero(promote_type(typeof(xmean), typeof(ymean)))
+    var_x = zero(typeof(xmean))
+    var_y = zero(typeof(ymean))
 
-    return cov(x, y; corrected = false) / (sx * sy)
+    @inbounds @simd for i in eachindex(x, y)
+        dx = x[i] - xmean
+        dy = y[i] - ymean
+        cov_xy += dx * _conj(dy)
+        var_x += abs2(dx)
+        var_y += abs2(dy)
+    end
+
+    (var_x == 0 || var_y == 0) && return oftype(real(zero(eltype(x)))/1, NaN)
+
+    return cov_xy / sqrt(var_x * var_y)
 end
 
 """
@@ -558,25 +606,113 @@ julia> cor([1 2 3; 1 2 3]; dims=2)  # Identical rows
 ```
 """
 function cor(X::AbstractMatrix; dims::Int = 1)
-    C = cov(X; dims = dims, corrected = false)
-
     if dims == 1
-        s = vec(std(X; dims = 1, corrected = false))
+        n, p = size(X)
+        n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
+
+        T = float(real(eltype(X)))
+
+        # Compute means with a loop
+        means = zeros(T, p)
+        @inbounds for j in 1:p
+            s = zero(eltype(X))
+            @simd for i in 1:n
+                s += X[i, j]
+            end
+            means[j] = real(s) / n
+        end
+
+        # Compute standard deviations
+        stds = zeros(T, p)
+        @inbounds for j in 1:p
+            s = zero(T)
+            @simd for i in 1:n
+                s += abs2(X[i, j] - means[j])
+            end
+            stds[j] = sqrt(s / n)
+        end
+
+        # Allocate output
+        R = zeros(T, p, p)
+        nan_val = oftype(T(0)/1, NaN)
+
+        # Compute correlation with nested loops (upper triangle only)
+        @inbounds for j in 1:p
+            for k in j:p
+                if stds[j] == 0 || stds[k] == 0
+                    R[j, k] = nan_val
+                    if j != k
+                        R[k, j] = nan_val
+                    end
+                else
+                    s = zero(T)
+                    @simd for i in 1:n
+                        s += real((X[i, j] - means[j]) * _conj(X[i, k] - means[k]))
+                    end
+                    R[j, k] = s / (n * stds[j] * stds[k])
+                    if j != k
+                        R[k, j] = R[j, k]
+                    end
+                end
+            end
+        end
+
+        return R
+    elseif dims == 2
+        n, p = size(X)
+        p == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), n, n)
+
+        T = float(real(eltype(X)))
+
+        # Compute means for rows
+        means = zeros(T, n)
+        @inbounds for i in 1:n
+            s = zero(eltype(X))
+            @simd for j in 1:p
+                s += X[i, j]
+            end
+            means[i] = real(s) / p
+        end
+
+        # Compute standard deviations for rows
+        stds = zeros(T, n)
+        @inbounds for i in 1:n
+            s = zero(T)
+            @simd for j in 1:p
+                s += abs2(X[i, j] - means[i])
+            end
+            stds[i] = sqrt(s / p)
+        end
+
+        # Allocate output
+        R = zeros(T, n, n)
+        nan_val = oftype(T(0)/1, NaN)
+
+        # Compute correlation with nested loops (upper triangle only)
+        @inbounds for j in 1:n
+            for k in j:n
+                if stds[j] == 0 || stds[k] == 0
+                    R[j, k] = nan_val
+                    if j != k
+                        R[k, j] = nan_val
+                    end
+                else
+                    s = zero(T)
+                    @simd for i in 1:p
+                        s += real((X[j, i] - means[j]) * _conj(X[k, i] - means[k]))
+                    end
+                    R[j, k] = s / (p * stds[j] * stds[k])
+                    if j != k
+                        R[k, j] = R[j, k]
+                    end
+                end
+            end
+        end
+
+        return R
     else
-        s = vec(std(X; dims = 2, corrected = false))
+        throw(ArgumentError("dims must be 1 or 2"))
     end
-
-    # Use broadcasting to compute correlation matrix
-    # Create outer product of standard deviations
-    s_outer = s * s'
-    
-    # Handle zero variance cases with broadcasting
-    R = similar(C)
-    zero_mask = (s_outer .== 0)
-    R[zero_mask] .= oftype(real(zero(eltype(X)))/1, NaN)
-    R[.!zero_mask] = C[.!zero_mask] ./ s_outer[.!zero_mask]
-
-    return R
 end
 
 """
@@ -682,7 +818,32 @@ julia> quantile(v, 0:0.25:1)  # All quartiles including extremes
 ```
 """
 function quantile(v::Vector, p::AbstractVector)
-    return [quantile(v, pi) for pi in p]
+    all(x -> 0 <= x <= 1, p) || throw(ArgumentError("quantile requires 0 <= p <= 1"))
+    isempty(v) && throw(ArgumentError("quantile of empty collection undefined"))
+
+    sorted = sort(v)
+    n = length(sorted)
+    T = float(eltype(v))
+
+    result = Vector{T}(undef, length(p))
+
+    @inbounds for (idx, pi) in enumerate(p)
+        if pi == 0
+            result[idx] = sorted[1]
+        elseif pi == 1
+            result[idx] = sorted[n]
+        else
+            h = T((n - 1) * pi + 1)
+            i = floor(Int, h)
+            if i == n
+                result[idx] = sorted[n]
+            else
+                result[idx] = sorted[i] + (h - i) * (sorted[i + 1] - sorted[i])
+            end
+        end
+    end
+
+    return result
 end
 
 """
