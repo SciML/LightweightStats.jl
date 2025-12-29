@@ -426,7 +426,7 @@ function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
         n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
 
         means = vec(mean(X; dims = 1))
-        C = zeros(promote_type(Float64, real(eltype(X))), p, p)
+        C = zeros(float(real(eltype(X))), p, p)
         
         # Center the data once using broadcasting
         X_centered = X .- means'
@@ -447,7 +447,7 @@ function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
         n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
 
         means = vec(mean(X; dims = 2))
-        C = zeros(promote_type(Float64, real(eltype(X))), p, p)
+        C = zeros(float(real(eltype(X))), p, p)
         
         # Center the data once using broadcasting
         X_centered = X .- means
@@ -628,13 +628,14 @@ function quantile(v::Vector, p::Real)
 
     sorted = sort(v)
     n = length(sorted)
+    T = float(eltype(v))
 
     if p == 0
         return sorted[1]
     elseif p == 1
         return sorted[n]
     else
-        h = (n - 1) * p + 1
+        h = T((n - 1) * p + 1)
         i = floor(Int, h)
         if i == n
             return sorted[n]
