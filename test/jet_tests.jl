@@ -1,12 +1,15 @@
 using LightweightStats
 using Test
 
-# JET tests are optional and only run on Julia 1.11+
+# JET tests are optional and only run on stable Julia releases 1.11+
 # JET has strict Julia version requirements and tight coupling with the compiler:
 # - JET 0.9.x works with Julia 1.10/1.11
 # - JET 0.10.x/0.11.x works with Julia 1.12+
-# We only run these tests on Julia 1.11+ for stability.
-const JET_AVAILABLE = VERSION >= v"1.11" && try
+# We skip JET tests on:
+# - Julia < 1.11 (LTS may have JET API differences)
+# - Julia pre-release/nightly (may not have JET support yet)
+const IS_STABLE_JULIA = VERSION >= v"1.11" && isempty(VERSION.prerelease)
+const JET_AVAILABLE = IS_STABLE_JULIA && try
     @eval using JET
     true
 catch e
