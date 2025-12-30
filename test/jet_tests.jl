@@ -1,8 +1,25 @@
 using LightweightStats
 using Test
-using JET
+
+# JET tests are optional and only run on Julia 1.11+
+# JET has strict Julia version requirements and tight coupling with the compiler:
+# - JET 0.9.x works with Julia 1.10/1.11
+# - JET 0.10.x/0.11.x works with Julia 1.12+
+# We only run these tests on Julia 1.11+ for stability.
+const JET_AVAILABLE = VERSION >= v"1.11" && try
+    @eval using JET
+    true
+catch e
+    @info "JET not available: $e"
+    false
+end
 
 @testset "JET static analysis" begin
+    if !JET_AVAILABLE
+        @info "JET tests skipped on Julia $(VERSION)"
+        @test_skip true  # Mark test as skipped
+        return
+    end
     @testset "JET error analysis" begin
         # Test key entry points for static errors using report_call
         rep = JET.report_call(mean, (Vector{Float64},))
