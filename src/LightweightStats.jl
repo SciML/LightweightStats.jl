@@ -777,7 +777,7 @@ function middle(x::Real)
 end
 
 # Precompilation workload
-using PrecompileTools
+using PrecompileTools: @compile_workload
 
 @compile_workload begin
     # Precompile the most commonly used functions with Float64 vectors

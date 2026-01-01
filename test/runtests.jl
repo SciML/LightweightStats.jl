@@ -12,6 +12,8 @@ using LightweightStats: mean, median, std, var, cov, cor, quantile, middle
     include("interface_tests.jl")
     # Include JET static analysis tests
     include("jet_tests.jl")
+    # Include explicit imports tests
+    include("explicit_imports_tests.jl")
     @testset "mean" begin
         @test mean([1, 2, 3, 4, 5]) ≈ 3.0
         @test mean([1.5, 2.5, 3.5]) ≈ 2.5
