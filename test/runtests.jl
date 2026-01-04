@@ -19,7 +19,7 @@ using LightweightStats: mean, median, std, var, cov, cor, quantile, middle
         @test mean([1.5, 2.5, 3.5]) ≈ 2.5
         @test mean(Float32[1, 2, 3]) ≈ 2.0f0
 
-        @test mean(x -> x^2, [1, 2, 3]) ≈ 14/3
+        @test mean(x -> x^2, [1, 2, 3]) ≈ 14 / 3
 
         A = [1 2 3; 4 5 6]
         @test mean(A) ≈ 3.5

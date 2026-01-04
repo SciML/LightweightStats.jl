@@ -256,7 +256,7 @@ For uncorrected variance:
 function var(A::AbstractArray; corrected::Bool = true, mean = nothing, dims = :)
     if dims === (:)
         n = length(A)
-        isempty(A) && return oftype(real(zero(eltype(A)))/1, NaN)
+        isempty(A) && return oftype(real(zero(eltype(A))) / 1, NaN)
         m = mean === nothing ? LightweightStats.mean(A) : mean
         s = sum(x -> abs2(x - m), A)
         return corrected ? s / (n - 1) : s / n
@@ -304,7 +304,7 @@ julia> std(A; dims=1)
 """
 function std(A::AbstractArray; corrected::Bool = true, mean = nothing, dims = :)
     return dims === (:) ? sqrt(var(A; corrected = corrected, mean = mean)) :
-           sqrt.(var(A; corrected = corrected, mean = mean, dims = dims))
+        sqrt.(var(A; corrected = corrected, mean = mean, dims = dims))
 end
 
 """
@@ -343,7 +343,7 @@ Throws `DimensionMismatch` if vectors have different lengths.
 function cov(x::AbstractVector, y::AbstractVector; corrected::Bool = true)
     n = length(x)
     length(y) == n || throw(DimensionMismatch("x and y must have the same length"))
-    n == 0 && return oftype(real(zero(eltype(x)))/1, NaN)
+    n == 0 && return oftype(real(zero(eltype(x))) / 1, NaN)
 
     xmean = mean(x)
     ymean = mean(y)
@@ -423,11 +423,11 @@ Throws `ArgumentError` if dims is not 1 or 2.
 function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
     if dims == 1
         n, p = size(X)
-        n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
+        n == 0 && return fill(oftype(real(zero(eltype(X))) / 1, NaN), p, p)
 
         means = vec(mean(X; dims = 1))
         C = zeros(float(real(eltype(X))), p, p)
-        
+
         # Center the data once using broadcasting
         X_centered = X .- means'
 
@@ -444,11 +444,11 @@ function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
         return C
     elseif dims == 2
         n, p = size(X')
-        n == 0 && return fill(oftype(real(zero(eltype(X)))/1, NaN), p, p)
+        n == 0 && return fill(oftype(real(zero(eltype(X))) / 1, NaN), p, p)
 
         means = vec(mean(X; dims = 2))
         C = zeros(float(real(eltype(X))), p, p)
-        
+
         # Center the data once using broadcasting
         X_centered = X .- means
 
@@ -515,7 +515,7 @@ function cor(x::AbstractVector, y::AbstractVector)
     sx = std(x; corrected = false)
     sy = std(y; corrected = false)
 
-    (sx == 0 || sy == 0) && return oftype(real(zero(eltype(x)))/1, NaN)
+    (sx == 0 || sy == 0) && return oftype(real(zero(eltype(x))) / 1, NaN)
 
     return cov(x, y; corrected = false) / (sx * sy)
 end
@@ -569,11 +569,11 @@ function cor(X::AbstractMatrix; dims::Int = 1)
     # Use broadcasting to compute correlation matrix
     # Create outer product of standard deviations
     s_outer = s * s'
-    
+
     # Handle zero variance cases with broadcasting
     R = similar(C)
     zero_mask = (s_outer .== 0)
-    R[zero_mask] .= oftype(real(zero(eltype(X)))/1, NaN)
+    R[zero_mask] .= oftype(real(zero(eltype(X))) / 1, NaN)
     R[.!zero_mask] = C[.!zero_mask] ./ s_outer[.!zero_mask]
 
     return R
