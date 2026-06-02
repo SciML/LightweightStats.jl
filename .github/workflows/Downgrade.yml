@@ -1,11 +1,12 @@
-name: "Format Check"
+name: "Downgrade"
 
 on:
   pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
-    tags: ["*"]
   workflow_dispatch:
 
 concurrency:
@@ -13,7 +14,10 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  runic:
-    name: "Runic Format Check"
-    uses: "SciML/.github/.github/workflows/runic.yml@v1"
+  downgrade:
+    name: "Downgrade Tests"
+    uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
+    with:
+      julia-version: "lts"
+      skip: "Pkg,TOML"
     secrets: "inherit"
