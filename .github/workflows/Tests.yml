@@ -1,0 +1,35 @@
+name: "Tests"
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags: ["*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  tests:
+    name: "Tests"
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "lts"
+          - "1"
+          - "pre"
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+    uses: "SciML/.github/.github/workflows/tests.yml@v1"
+    with:
+      julia-version: "${{ matrix.version }}"
+      julia-arch: "x64"
+      os: "${{ matrix.os }}"
+      coverage: true
+    secrets: "inherit"
