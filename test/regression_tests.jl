@@ -208,6 +208,19 @@ using Random
         end
     end
 
+    @testset "cov - complex matrices" begin
+        # Off-diagonal covariances are genuinely complex here, so the result
+        # matrix must have a complex eltype (regression for an InexactError when
+        # the result was allocated as a real matrix).
+        Xc = ComplexF64[1 + 1im 2 + 3im; 3 - 1im 4 + 2im; 5 + 0im 6 - 1im]
+        for dims in (1, 2)
+            C_lw = LightweightStats.cov(Xc; dims = dims)
+            C_st = Statistics.cov(Xc; dims = dims)
+            @test eltype(C_lw) <: Complex
+            @test C_lw ≈ C_st
+        end
+    end
+
     @testset "cor - correlation vectors" begin
         x = randn(30)
         y = randn(30)
