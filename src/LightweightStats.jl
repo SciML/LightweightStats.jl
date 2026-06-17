@@ -426,15 +426,17 @@ function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
         n == 0 && return fill(oftype(real(zero(eltype(X))) / 1, NaN), p, p)
 
         means = vec(mean(X; dims = 1))
-        C = zeros(float(real(eltype(X))), p, p)
-
-        # Center the data once using broadcasting
-        X_centered = X .- means'
+        Tc = float(eltype(X))
+        C = zeros(Tc, p, p)
 
         for i in 1:p
+            mi = means[i]
             for j in i:p
-                # Use views and broadcasting for column operations
-                s = sum(view(X_centered, :, i) .* _conj(view(X_centered, :, j)))
+                mj = means[j]
+                s = zero(Tc)
+                for k in 1:n
+                    s += (X[k, i] - mi) * _conj(X[k, j] - mj)
+                end
                 C[i, j] = corrected ? s / (n - 1) : s / n
                 if i != j
                     C[j, i] = _conj(C[i, j])
@@ -443,19 +445,21 @@ function cov(X::AbstractMatrix; dims::Int = 1, corrected::Bool = true)
         end
         return C
     elseif dims == 2
-        n, p = size(X')
+        p, n = size(X)
         n == 0 && return fill(oftype(real(zero(eltype(X))) / 1, NaN), p, p)
 
         means = vec(mean(X; dims = 2))
-        C = zeros(float(real(eltype(X))), p, p)
-
-        # Center the data once using broadcasting
-        X_centered = X .- means
+        Tc = float(eltype(X))
+        C = zeros(Tc, p, p)
 
         for i in 1:p
+            mi = means[i]
             for j in i:p
-                # Use views and broadcasting for row operations
-                s = sum(view(X_centered, i, :) .* _conj(view(X_centered, j, :)))
+                mj = means[j]
+                s = zero(Tc)
+                for k in 1:n
+                    s += (X[i, k] - mi) * _conj(X[j, k] - mj)
+                end
                 C[i, j] = corrected ? s / (n - 1) : s / n
                 if i != j
                     C[j, i] = _conj(C[i, j])
