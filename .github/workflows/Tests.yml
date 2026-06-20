@@ -29,7 +29,6 @@ jobs:
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
       julia-version: "${{ matrix.version }}"
-      julia-arch: "x64"
       os: "${{ matrix.os }}"
       coverage: true
     secrets: "inherit"
