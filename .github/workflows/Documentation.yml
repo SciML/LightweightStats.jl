@@ -15,6 +15,9 @@ concurrency:
 jobs:
   documentation:
     name: "Documentation"
+    permissions:
+      contents: write
+      statuses: write
     uses: "SciML/.github/.github/workflows/documentation.yml@v1"
     with:
       julia-version: "1"
