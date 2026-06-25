@@ -1,0 +1,18 @@
+# Root test-group matrix for LightweightStats.jl, consumed by the reusable
+# grouped-tests.yml workflow and by SciMLTesting's run_tests() folder-discovery
+# mode in runtests.jl. Each table key is a GROUP value passed to runtests.jl.
+#
+#   "Core" -> the top-level test/*.jl files (the functional + regression tests).
+#             Runs on lts/1/pre across the three OSes.
+#   "QA"   -> the test/qa/ folder (SciMLTesting run_qa: Aqua + ExplicitImports +
+#             JET), which is brittle on prereleases, so it runs only on lts/1.
+#             QA is always excluded from a local GROUP=All aggregate run.
+
+[Core]
+versions = ["lts", "1", "pre"]
+os = ["ubuntu-latest", "macOS-latest", "windows-latest"]
+
+[QA]
+in_all = false
+versions = ["lts", "1"]
+os = ["ubuntu-latest"]
