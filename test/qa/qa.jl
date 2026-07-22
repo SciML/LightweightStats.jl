@@ -1,3 +1,3 @@
-using SciMLTesting, LightweightStats, JET, Test
+using SciMLTesting, LightweightStats
 
-run_qa(LightweightStats; explicit_imports = true)
+run_qa(LightweightStats)

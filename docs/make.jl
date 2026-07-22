@@ -7,6 +7,8 @@ makedocs(;
     modules = [LightweightStats],
     authors = "ChrisRackauckas <contact@chrisrackauckas.com>",
     sitename = "LightweightStats.jl",
+    checkdocs = :exports,
+    doctest = true,
     format = Documenter.HTML(;
         canonical = "https://SciML.github.io/LightweightStats.jl",
         edit_link = "main",
