@@ -1,3 +1,3 @@
-using SciMLTesting, LightweightStats
+using SciMLTesting, LightweightStats, JET
 
-run_qa(LightweightStats)
+run_qa(LightweightStats; jet_kwargs = (; mode = :basic))
